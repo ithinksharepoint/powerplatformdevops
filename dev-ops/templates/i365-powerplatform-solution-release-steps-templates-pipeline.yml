@@ -1,0 +1,60 @@
+# iThink 365 Core 
+# Power Platform Release Pipeline Tasks
+# Author: Simon Doy
+# Date: 2021-11-19
+# www.ithink365.co.uk
+# Description
+# This pipeline releases a Power Platform solution, the assets are pulled down from a build pipeline.
+# Usage
+# Change the source of the pipeline that builds the artifacts.
+
+parameters:
+- name: 'PowerPlatformSolutionName'
+  default: 'MyPowerPlatformSolution.zip' # e.g. MyPowerPlatformSolution.zip
+  type: string 
+- name: 'PowerPlatformTargetEnvironmentName'
+  default: 'Power Platform Test Environment (dev.ithink365.co.uk)'
+  type: string
+- name: 'PowerPlatformSolutionSettingsFileName'
+  default: '' # e.g. settings-test.json
+  type: string
+
+steps:
+- task: PowerShell@2
+  displayName: 'List files in directory'
+  enabled: true
+  inputs:
+    workingDirectory: '$(Pipeline.Workspace)'
+    targetType: 'inline'
+    script: |
+      # list items
+      Get-ChildItem -Recurse
+
+- task: qetza.replacetokens.replacetokens-task.replacetokens@4
+  displayName: 'Setup Power Platform Configuration'
+  inputs:
+    targetFiles: '$(Pipeline.Workspace)/**/${{ parameters.PowerPlatformSolutionSettingsFileName }}'
+    encoding: 'auto'
+    tokenPattern: 'rm'
+    writeBOM: true
+    actionOnMissing: 'warn'
+    keepToken: false
+    actionOnNoFiles: 'continue'
+    enableTransforms: false
+    useLegacyPattern: false
+    enableTelemetry: true
+
+- task: PowerPlatformToolInstaller@0
+  inputs:
+    DefaultVersion: true
+
+- task: PowerPlatformImportSolution@0
+  inputs:
+    authenticationType: 'PowerPlatformSPN'
+    PowerPlatformSPN: '${{ parameters.PowerPlatformTargetEnvironmentName }}'
+    SolutionInputFile: '$(Pipeline.Workspace)/api/drop/${{ parameters.PowerPlatformSolutionName }}'
+    UseDeploymentSettingsFile: true
+    DeploymentSettingsFile: '$(Pipeline.Workspace)/api/drop/${{ parameters.PowerPlatformSolutionSettingsFileName }}'
+    AsyncOperation: true
+    OverwriteUnmanagedCustomizations: true
+    MaxAsyncWaitTime: '60'

@@ -1,0 +1,3 @@
+# Example Variable Group
+variables:
+- group: my-application-test

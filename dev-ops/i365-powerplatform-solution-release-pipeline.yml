@@ -1,0 +1,79 @@
+# iThink 365 Core 
+# Power Platform Release Pipeline
+# Author: Simon Doy
+# Date: 2021-11-19
+# www.ithink365.co.uk
+# Description
+# This pipeline releases a Power Platform solution, the assets are pulled down from a build pipeline.
+# Usage
+# Change the source of the pipeline that builds the artifacts.
+
+trigger:
+  none
+
+resources:
+  pipelines:
+  - pipeline: api
+    source: 'My Application Build CI' # name of the pipeline that produces an artifact e.g. My Application Build CI
+    trigger:
+      none
+
+pool:
+  vmImage: windows-2019
+
+variables:
+#  - name: PowerPlatformSolutionName
+#    value: '$(PowerPlatformSolutionName)' # should end with Solution.zip e.g. MyPowerPlatformSolution.zip
+  - name: DeployToCustomerDevelopmentEnvironment
+    value: false # Should we deploy to the customer development Environment e.g. false
+
+parameters:
+  - name: deployToCustomer
+    displayName: Deploy to Customer
+    type: boolean
+    default: false
+
+stages:
+- stage: Test
+  dependsOn:
+  displayName: 'Test'
+  jobs:
+    # track deployments on the environment
+  - deployment: DeployPowerPlatformSolution
+    displayName: DeployPowerPlatformSolution to Test
+    
+    pool:
+      vmImage: 'windows-2019'
+    environment: 'Test'
+    strategy:
+        runOnce:
+          deploy:
+            steps:
+            - template: templates/i365-powerplatform-solution-release-steps-templates-pipeline.yml
+              parameters:
+                PowerPlatformTargetEnvironmentName: 'Power Platform Test Environment (dev.ithink365.co.uk)'
+                PowerPlatformSolutionName: '$(PowerPlatformSolutionName)'
+                PowerPlatformSolutionSettingsFileName: 'settings-test.json'
+
+- stage: Production
+  condition: and(succeeded(), eq('${{ parameters.deployToCustomer }}', 'true'))
+  dependsOn:
+   Test
+  displayName: 'Production'
+  jobs:
+    # track deployments on the environment
+  - deployment: DeployPowerPlatformSolution
+    displayName: DeployPowerPlatformSolution to Production
+    
+    pool:
+      vmImage: 'windows-2019'
+    environment: 'Production'
+    strategy:
+        runOnce:
+          deploy:
+            steps:
+            - template: templates/i365-powerplatform-solution-release-steps-templates-pipeline.yml
+              parameters:
+                PowerPlatformTargetEnvironmentName: 'Power Platform Production Environment (dev.ithink365.co.uk)'
+                PowerPlatformSolutionName: '$(PowerPlatformSolutionName)'
+                PowerPlatformSolutionSettingsFileName: 'settings-test.json'
