@@ -78,6 +78,7 @@ steps:
       ##vso[release.addbuildtag]$buildName
       Write-Host "##vso[build.addbuildtag]$(Build.SourceBranchName)"
       ##vso[release.addbuildtag]$(Build.SourceBranchName)
+      
 - task: PowerPlatformPublishCustomizations@0
   displayName: 'Publish Power Platform Customisations'
   inputs:
