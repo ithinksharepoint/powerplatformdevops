@@ -2,10 +2,12 @@
 # Power Platform Release Pipeline
 # Author: Simon Doy
 # Date: 2021-11-19
+# Last modified: 2022-07-28
 # www.ithink365.co.uk
 # Description
 # This pipeline releases a Power Platform solution, the assets are pulled down from a build pipeline.
-# Usage
+
+# Usage:
 # Change the source of the pipeline that builds the artifacts.
 
 trigger:

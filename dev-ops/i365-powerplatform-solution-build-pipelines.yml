@@ -2,15 +2,25 @@
 # Power Platform Build Pipeline
 # Author: Simon Doy
 # Date: 2021-11-19
+# Last modified: 2022-07-28
 # www.ithink365.co.uk
 # Description
 # This pipeline builds a Power Platform solution, exports it out and associates to the build.
+# 
+# Usage
+# Define the 3 commented out variables when setting up a pipeline based on this YAML file.
 
 trigger:
   none
 
 pool:
   vmImage: windows-2019
+
+parameters:
+  - name: buildAsManagedSolution
+    displayName: Build as Managed Solution
+    type: boolean
+    default: false
 
 variables:
   - name: version.Revision
@@ -82,7 +92,17 @@ steps:
     SolutionName: '$(PowerPlatformSolutionName)'
     SolutionVersionNumber: '$(versionNumber)'
 
-
+- task: PowerPlatformExportSolution@0
+  displayName: 'Export Power Platform Solution as Unmanaged Solution'
+  inputs:
+    authenticationType: 'PowerPlatformSPN'
+    PowerPlatformSPN: '$(PowerPlatformEnvironmentName)'
+    SolutionName: '$(PowerPlatformSolutionName)'
+    SolutionOutputFile: '$(Build.ArtifactStagingDirectory)\$(PowerPlatformSolutionName)Solution_Unmanaged.zip'
+    Managed: false
+    AsyncOperation: true
+    MaxAsyncWaitTime: '60'
+    ExportAutoNumberingSettings: true
 
 - task: PowerPlatformExportSolution@0
   displayName: 'Export Power Platform Solution'
@@ -91,7 +111,7 @@ steps:
     PowerPlatformSPN: '$(PowerPlatformEnvironmentName)'
     SolutionName: '$(PowerPlatformSolutionName)'
     SolutionOutputFile: '$(Build.ArtifactStagingDirectory)\$(PowerPlatformSolutionName)Solution.zip'
-    Managed: false
+    Managed: ${{ parameters.buildAsManagedSolution }}
     AsyncOperation: true
     MaxAsyncWaitTime: '60'
     ExportAutoNumberingSettings: true
@@ -106,7 +126,10 @@ steps:
   inputs:
     SolutionInputFile: '$(Build.ArtifactStagingDirectory)\$(PowerPlatformSolutionName)Solution.zip'
     SolutionTargetFolder: '$(Build.ArtifactStagingDirectory)\Unpacked'
-    SolutionType: 'Unmanaged'
+    ${{ if parameters.buildAsManagedSolution }}:
+      SolutionType: 'Managed'
+    ${{ else }}:
+      SolutionType: 'Unmanaged'
 
 - task: DeleteFiles@1
   enabled: true
@@ -120,7 +143,10 @@ steps:
   inputs:
     SolutionSourceFolder: '$(Build.ArtifactStagingDirectory)\Unpacked'
     SolutionOutputFile: '$(Build.ArtifactStagingDirectory)\$(PowerPlatformSolutionName)Solution.zip'
-    SolutionType: 'Unmanaged'
+    ${{ if parameters.buildAsManagedSolution }}:
+      SolutionType: 'Managed'
+    ${{ else }}:
+      SolutionType: 'Unmanaged'
 
 - task: CopyFiles@2
   displayName: 'Copy Solution Settings file'
