@@ -2,7 +2,7 @@
 # Power Platform Release Pipeline
 # Author: Simon Doy
 # Date: 2021-11-19
-# Last modified: 2022-07-28
+# Last modified: 2026-01-13
 # www.ithink365.co.uk
 # Description
 # This pipeline releases a Power Platform solution, the assets are pulled down from a build pipeline.
@@ -21,13 +21,21 @@ resources:
       none
 
 pool:
-  vmImage: windows-2019
+  vmImage: windows-2022
 
 variables:
 #  - name: PowerPlatformSolutionName
 #    value: '$(PowerPlatformSolutionName)' # should end with Solution.zip e.g. MyPowerPlatformSolution.zip
   - name: DeployToCustomerDevelopmentEnvironment
     value: false # Should we deploy to the customer development Environment e.g. false
+  - name: PowerPlatformSolutionSettingsFile
+    value: '' # e.g. application-settings-dev.json
+
+parameters:
+  - name: buildAsManagedSolution
+    displayName: Build as Managed Solution
+    type: boolean
+    default: true
 
 parameters:
   - name: deployToCustomer
@@ -55,7 +63,11 @@ stages:
               parameters:
                 PowerPlatformTargetEnvironmentName: 'Power Platform Test Environment (dev.ithink365.co.uk)'
                 PowerPlatformSolutionName: '$(PowerPlatformSolutionName)'
-                PowerPlatformSolutionSettingsFileName: 'settings-test.json'
+                PowerPlatformSolutionSettingsFileName: '$(PowerPlatformSolutionSettingsFile)'
+                KnowledgeSourceUpdate: false
+                KnowledgeSourceName: '[ExampleName]'
+                KnowledgeSourceSiteUrl: 'https://myorg.sharepoint.com/sites/KnowledgeBase'
+                buildAsManagedSolution: ${{ parameters.buildAsManagedSolution }}
 
 - stage: Production
   condition: and(succeeded(), eq('${{ parameters.deployToCustomer }}', 'true'))
@@ -78,4 +90,8 @@ stages:
               parameters:
                 PowerPlatformTargetEnvironmentName: 'Power Platform Production Environment (dev.ithink365.co.uk)'
                 PowerPlatformSolutionName: '$(PowerPlatformSolutionName)'
-                PowerPlatformSolutionSettingsFileName: 'settings-test.json'
+                PowerPlatformSolutionSettingsFileName: '$(PowerPlatformSolutionSettingsFile)'
+                KnowledgeSourceUpdate: false
+                KnowledgeSourceName: '[ExampleName]'
+                KnowledgeSourceSiteUrl: 'https://myorg.sharepoint.com/sites/KnowledgeBase'
+                buildAsManagedSolution: ${{ parameters.buildAsManagedSolution }}

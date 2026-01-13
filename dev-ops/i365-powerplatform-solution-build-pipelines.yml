@@ -2,7 +2,7 @@
 # Power Platform Build Pipeline
 # Author: Simon Doy
 # Date: 2021-11-19
-# Last modified: 2022-07-28
+# Last modified: 2026-01-13
 # www.ithink365.co.uk
 # Description
 # This pipeline builds a Power Platform solution, exports it out and associates to the build.
@@ -14,13 +14,13 @@ trigger:
   none
 
 pool:
-  vmImage: windows-2019
+  vmImage: windows-2022
 
 parameters:
   - name: buildAsManagedSolution
     displayName: Build as Managed Solution
     type: boolean
-    default: false
+    default: true
 
 variables:
   - name: version.Revision
@@ -78,7 +78,14 @@ steps:
       ##vso[release.addbuildtag]$buildName
       Write-Host "##vso[build.addbuildtag]$(Build.SourceBranchName)"
       ##vso[release.addbuildtag]$(Build.SourceBranchName)
-      
+
+- task: CopyFiles@2
+  displayName: 'Copy Tools to Artifacts Staging'
+  inputs:
+    Contents: 'dev-ops/tools/*'
+    TargetFolder: '$(Build.ArtifactStagingDirectory)/tools'
+    flattenFolders: true
+
 - task: PowerPlatformPublishCustomizations@0
   displayName: 'Publish Power Platform Customisations'
   inputs:
@@ -120,7 +127,7 @@ steps:
 - powershell: |
    $env:PATH = $env:PATH + ";" + "$(pacPath)"
    
-   pac solution create-settings --solution-zip "$(Build.ArtifactStagingDirectory)\\$(PowerPlatformSolutionName)Solution.zip" --settings-file "$(Build.ArtifactStagingDirectory)//settings-test.json"
+   pac solution create-settings --solution-zip "$(Build.ArtifactStagingDirectory)\\$(PowerPlatformSolutionName)Solution.zip" --settings-file "$(Build.ArtifactStagingDirectory)//solution-settings.json"
   displayName: "Extract Solution Settings, Environment Variables and Connection References"
  
 - task: PowerPlatformUnpackSolution@0

@@ -2,6 +2,7 @@
 # Power Platform Release Pipeline Tasks
 # Author: Simon Doy
 # Date: 2021-11-19
+# Last modified: 2026-01-13
 # www.ithink365.co.uk
 # Description
 # This pipeline releases a Power Platform solution, the assets are pulled down from a build pipeline.
@@ -16,8 +17,21 @@ parameters:
   default: 'Power Platform Test Environment (dev.ithink365.co.uk)'
   type: string
 - name: 'PowerPlatformSolutionSettingsFileName'
-  default: '' # e.g. settings-test.json
+  default: '' # e.g. application-settings-test.json
   type: string
+- name: 'KnowledgeSourceUpdate'
+  default: false
+  type: boolean 
+- name: 'KnowledgeSourceName'
+  default: '' # e.g. iThink365 Knowledge Source
+  type: string
+- name: 'KnowledgeSourceSiteUrl'
+  default: '' # e.g. https://dev.ithink365.co.uk/sites/KnowledgeBase
+  type: string 
+- name: buildAsManagedSolution
+  displayName: Build as Managed Solution
+  type: boolean
+  default: true
 
 steps:
 - task: PowerShell@2
@@ -30,12 +44,12 @@ steps:
       # list items
       Get-ChildItem -Recurse
 
-- task: qetza.replacetokens.replacetokens-task.replacetokens@4
+- task: qetza.replacetokens.replacetokens-task.replacetokens@6
   displayName: 'Setup Power Platform Configuration'
   inputs:
-    targetFiles: '$(Pipeline.Workspace)/**/${{ parameters.PowerPlatformSolutionSettingsFileName }}'
+    sources: '$(Pipeline.Workspace)/**/${{ parameters.PowerPlatformSolutionSettingsFileName }}'
     encoding: 'auto'
-    tokenPattern: 'rm'
+    tokenPattern: 'doubleunderscores'
     writeBOM: true
     actionOnMissing: 'warn'
     keepToken: false
@@ -44,17 +58,43 @@ steps:
     useLegacyPattern: false
     enableTelemetry: true
 
-- task: PowerPlatformToolInstaller@0
+- task: PowerPlatformToolInstaller@2
   inputs:
     DefaultVersion: true
 
-- task: PowerPlatformImportSolution@0
+- pwsh: |
+    $(Pipeline.Workspace)/api/drop/tools/Update-PowerPlatformSolutionKnowledgeSite.ps1 -DirectoryPath '$(Pipeline.Workspace)/api/drop/Unpacked' -KnowledgeSourceName '${{ parameters.KnowledgeSourceName }}' -SiteUrl ${{ parameters.KnowledgeSourceSiteUrl }}
+  displayName: 'Update Copilot Agent Knowledge Sources'
+  enabled: ${{ parameters.KnowledgeSourceUpdate }}
+
+- task: PowerPlatformPackSolution@2
+  displayName: 'Pack Power Platform Solution'
+  inputs:
+    SolutionSourceFolder: '$(Pipeline.Workspace)/api/drop/Unpacked'
+    SolutionOutputFile: '$(Pipeline.Workspace)/api/drop/packed/${{ parameters.PowerPlatformSolutionName }}'
+    ${{ if parameters.buildAsManagedSolution }}:
+      SolutionType: 'Managed'
+    ${{ else }}:
+      SolutionType: 'Unmanaged'
+
+- task: PowerPlatformImportSolution@2
   inputs:
     authenticationType: 'PowerPlatformSPN'
     PowerPlatformSPN: '${{ parameters.PowerPlatformTargetEnvironmentName }}'
-    SolutionInputFile: '$(Pipeline.Workspace)/api/drop/${{ parameters.PowerPlatformSolutionName }}'
-    UseDeploymentSettingsFile: true
-    DeploymentSettingsFile: '$(Pipeline.Workspace)/api/drop/${{ parameters.PowerPlatformSolutionSettingsFileName }}'
+    SolutionInputFile: '$(Pipeline.Workspace)/api/drop/packed/${{ parameters.PowerPlatformSolutionName }}'
+    ${{ if ne(parameters.PowerPlatformSolutionSettingsFileName, '') }}:
+      UseDeploymentSettingsFile: true
+      DeploymentSettingsFile: '$(Pipeline.Workspace)/api/drop/${{ parameters.PowerPlatformSolutionSettingsFileName }}'
+    ${{ else }}:
+      UseDeploymentSettingsFile: false
     AsyncOperation: true
     OverwriteUnmanagedCustomizations: true
+    PublishWorkflows: true
+    WaitForCompletion: true
     MaxAsyncWaitTime: '60'
+    StageAndUpgrade: true
+    ${{ if parameters.buildAsManagedSolution }}:
+      ConvertToManaged: true
+    ${{ else }}:
+      ConvertToManaged: false
+    PublishCustomizationChanges: true
