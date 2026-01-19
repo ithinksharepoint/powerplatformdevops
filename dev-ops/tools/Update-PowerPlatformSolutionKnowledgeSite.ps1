@@ -11,14 +11,21 @@
 
     Write-Host "Updating knowledge source $KnowledgeSourceName with Site Url $SiteUrl in directory: $DirectoryPath"
 
-    # Search for a folder containing 'knowledge.$KnowledgeSourceName' in its name
+    # Search for a folder containing 'knowledge.$KnowledgeSourceName_' or 'topic.$KnowledgeSourceName_' in its name
     $knowledgeFolder = Get-ChildItem -Path $DirectoryPath -Directory -Recurse |
-        Where-Object { $_.Name -like "*knowledge.$KnowledgeSourceName*" } |
-        Select-Object -First 1
+        Where-Object { $_.Name -like "*knowledge.$KnowledgeSourceName_*" } |
+        Select-Object -First 1;
 
     if (-not $knowledgeFolder) {
-        Write-Error "Could not find a folder containing '*knowledge.$KnowledgeSourceName*' in '$DirectoryPath'."
-        return
+        $knowledgeFolder = Get-ChildItem -Path $DirectoryPath -Directory -Recurse |
+        Where-Object { $_.Name -like "*topic.$KnowledgeSourceName_*" } |
+        Select-Object -First 1;
+    }
+
+     
+    if (-not $knowledgeFolder) {
+        Write-Error "Could not find a folder containing '*knowledge.$KnowledgeSourceName*' in '$DirectoryPath'.";
+        return;
     }
 
     # Look for a file named 'data' in the found folder
