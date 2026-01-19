@@ -13,12 +13,12 @@
 
     # Search for a folder containing 'knowledge.$KnowledgeSourceName_' or 'topic.$KnowledgeSourceName_' in its name
     $knowledgeFolder = Get-ChildItem -Path $DirectoryPath -Directory -Recurse |
-        Where-Object { $_.Name -like "*knowledge.$KnowledgeSourceName_*" } |
+        Where-Object { $_.Name -like "*knowledge.$KnowledgeSourceName*" } |
         Select-Object -First 1;
 
     if (-not $knowledgeFolder) {
         $knowledgeFolder = Get-ChildItem -Path $DirectoryPath -Directory -Recurse |
-        Where-Object { $_.Name -like "*topic.$KnowledgeSourceName_*" } |
+        Where-Object { $_.Name -like "*topic.$KnowledgeSourceName*" } |
         Select-Object -First 1;
     }
 
